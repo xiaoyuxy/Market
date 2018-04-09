@@ -2,7 +2,10 @@ package marketplace.service.business;
 
 import marketplace.datastore.BidDataStore;
 import marketplace.datastore.InMemoryBidDataStore;
+import marketplace.datastore.InMemoryProjectDataStore;
+import marketplace.datastore.ProjectDataStore;
 import marketplace.model.Bid;
+import marketplace.model.Project;
 import marketplace.service.auth.AuthorizationException;
 import org.hamcrest.Matchers;
 import org.junit.Test;
@@ -20,22 +23,32 @@ public class BidServiceImplTest {
 
     private static final Date TEST_DATE1 = new Date(1523231387);
     private static final Date TEST_DATE2 = new Date(1525231387);
-    private static final UUID PROJECT_ID = UUID.randomUUID();
-    private static final UUID PROJECT_ID2 = UUID.randomUUID();
+    private static UUID PROJECT_ID;
+    private static UUID PROJECT_ID2;
 
 
     private final BidServiceImpl bidService;
 
     public BidServiceImplTest() {
+        ProjectDataStore projectDataStore = new InMemoryProjectDataStore();
+        ProjectService projectService = new ProjectServiceImpl(projectDataStore);
+        Project testProject1 = new Project(null, null,"test1", "", 100.0, TEST_DATE1);
+        Project testProject2 = new Project(null, null,"test2", "", 101.0, TEST_DATE2);
+
+        PROJECT_ID = projectService.createProject(testProject1, "user1");
+        PROJECT_ID2 = projectService.createProject(testProject2, "user2");
+
         BidDataStore bidDataStore = new InMemoryBidDataStore();
-        bidService = new BidServiceImpl(bidDataStore);
+        /*ProjectDataStore projectDataStore = new InMemoryProjectDataStore();
+        ProjectService projectService = new ProjectServiceImpl(projectDataStore);*/
+        bidService = new BidServiceImpl(bidDataStore, projectService);
     }
 
     @Test
     public void testCreateAndGet() throws Exception {
-        Bid testBid1 = new Bid(null, PROJECT_ID, null, 100.0, TEST_DATE1);
-        Bid testBid2 = new Bid(null, PROJECT_ID, null, 200.0, TEST_DATE1);
-        Bid testBid3 = new Bid(null, PROJECT_ID2, null, 100.0, TEST_DATE1);
+        Bid testBid1 = new Bid(null, PROJECT_ID, null, 99.0, TEST_DATE1);
+        Bid testBid2 = new Bid(null, PROJECT_ID, null, 99.0, TEST_DATE1);
+        Bid testBid3 = new Bid(null, PROJECT_ID2, null, 99.0, TEST_DATE1);
 
 
         // create a bid
@@ -47,13 +60,13 @@ public class BidServiceImplTest {
         // Get bid by Id
         Bid bid1 = bidService.getBidById(bidId1);
         assertThat(bid1.getBidId(), Matchers.equalTo(bidId1));
-        assertThat(bid1.getBidPrice(), Matchers.equalTo(100.0));
+        assertThat(bid1.getBidPrice(), Matchers.equalTo(99.0));
         assertThat(bid1.getOwnerId(), Matchers.equalTo("user1"));
         assertThat(bid1.getProjectId(), Matchers.equalTo(PROJECT_ID));
 
         Bid bid2 = bidService.getBidById(bidId2);
         assertThat(bid2.getBidId(), Matchers.equalTo(bidId2));
-        assertThat(bid2.getBidPrice(), Matchers.equalTo(200.0));
+        assertThat(bid2.getBidPrice(), Matchers.equalTo(99.0));
         assertThat(bid2.getOwnerId(), Matchers.equalTo("user2"));
         assertThat(bid2.getProjectId(), Matchers.equalTo(PROJECT_ID));
         Bid bid3 = bidService.getBidById(bidId3);

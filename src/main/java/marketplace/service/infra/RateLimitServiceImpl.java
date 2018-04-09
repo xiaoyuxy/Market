@@ -7,11 +7,12 @@ import java.util.Map;
 import java.util.concurrent.DelayQueue;
 
 /**
- * A naive yet expensive rate limit implementation.
- * TODO: replace this with a industry widely used rate limiter like
+ * A naive blocking rate limit implementation.
+ *
  * @author xiaoyuliang
  */
 public class RateLimitServiceImpl implements RateLimitService {
+    private static final double REQ_PER_SEC = 2.0; // we allow 2 request per second for each api-key
     private final Map<String, RateLimiter> rateLimiterMap;
 
     public RateLimitServiceImpl() {
@@ -19,7 +20,14 @@ public class RateLimitServiceImpl implements RateLimitService {
     }
 
     @Override
-    public boolean accept(String apiKey) {
-        return false;
+    public void accept(String apiKey) {
+        RateLimiter rateLimiter = rateLimiterMap.get(apiKey);
+        if (rateLimiter == null) {
+            rateLimiter = RateLimiter.create(REQ_PER_SEC);
+            rateLimiterMap.put(apiKey, rateLimiter);
+        }
+        if (!rateLimiter.tryAcquire()) {
+            throw new RateLimitException();
+        }
     }
 }

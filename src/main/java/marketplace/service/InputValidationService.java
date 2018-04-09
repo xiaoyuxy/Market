@@ -25,8 +25,4 @@ public class InputValidationService {
     public static boolean validateBidForCreate(Bid bid) {
         return bid.isValidBid();
     }
-
-    public static boolean validateBidUUID(String bidId) {
-        return true;
-    }
 }

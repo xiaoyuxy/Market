@@ -1,8 +1,8 @@
 package marketplace;
 
-import com.sun.javaws.exceptions.InvalidArgumentException;
 import marketplace.service.auth.AuthenticationException;
 import marketplace.service.auth.AuthorizationException;
+import marketplace.service.infra.RateLimitException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,13 +21,6 @@ public class ApplicationExceptionHandler extends ResponseEntityExceptionHandler 
     protected ResponseEntity<Object> handleConflict(RuntimeException ex, WebRequest request) {
         String bodyOfResponse = "This should be application specific";
         return handleExceptionInternal(ex, bodyOfResponse,
-                new HttpHeaders(), HttpStatus.CONFLICT, request);
-    }
-
-    @ExceptionHandler(value = { InvalidArgumentException.class })
-    protected ResponseEntity<Object> handleInvalidArgument(RuntimeException ex, WebRequest request) {
-        String bodyOfResponse = "";
-        return handleExceptionInternal(ex, bodyOfResponse,
                 new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
     }
 
@@ -36,5 +29,12 @@ public class ApplicationExceptionHandler extends ResponseEntityExceptionHandler 
         String bodyOfResponse = "Unauthorized ";
         return handleExceptionInternal(ex, bodyOfResponse,
                 new HttpHeaders(), HttpStatus.UNAUTHORIZED, request);
+    }
+
+    @ExceptionHandler(value = { RateLimitException.class})
+    protected ResponseEntity<Object> handleRateLimitException(RuntimeException ex, WebRequest request) {
+        String bodyOfResponse = "Rate limit exceeded ";
+        return handleExceptionInternal(ex, bodyOfResponse,
+                new HttpHeaders(), HttpStatus.FORBIDDEN, request);
     }
 }

@@ -10,7 +10,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 public class MarketPlace {
 
     public static void main(String[] args) {
-
         SpringApplication.run(MarketPlace.class, args);
     }
 }

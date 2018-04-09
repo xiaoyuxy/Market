@@ -1,13 +1,12 @@
 package marketplace.controller;
 
-import marketplace.datastore.InMemoryProjectDataStore;
-import marketplace.datastore.ProjectDataStore;
 import marketplace.model.Project;
 import marketplace.service.*;
 import marketplace.service.auth.AuthenticationService;
 import marketplace.service.auth.FakeAuthenticationService;
+import marketplace.service.business.BidWinnerNotificationService;
 import marketplace.service.business.ProjectService;
-import marketplace.service.business.ProjectServiceImpl;
+import marketplace.service.infra.RateLimitService;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,17 +24,23 @@ import java.util.UUID;
  * @author Xiaoyu Liang
  */
 @RestController
-@RequestMapping("/project")
+@RequestMapping("/api/project")
 public class ProjectController {
 
     private static final Logger logger = LoggerFactory.getLogger(ProjectController.class);
     private final ProjectService projectService;
+    private final RateLimitService rateLimitService;
+    private final BidWinnerNotificationService bidWinnerNotificationService;
     private final AuthenticationService authenticationService;
 
     @Autowired
-    public ProjectController(JdbcTemplate jdbcTemplate) {
-        ProjectDataStore projectDataStore = new InMemoryProjectDataStore();//new DbProjectDataStore(jdbcTemplate);
-        this.projectService = new ProjectServiceImpl(projectDataStore);
+    public ProjectController(JdbcTemplate jdbcTemplate, ProjectService projectService,
+                             RateLimitService rateLimitService,
+                             BidWinnerNotificationService bidWinnerNotificationService) {
+        this.projectService = projectService;
+        this.rateLimitService = rateLimitService;
+        this.bidWinnerNotificationService = bidWinnerNotificationService;
+        bidWinnerNotificationService.run();
         this.authenticationService = new FakeAuthenticationService();
     }
 
@@ -44,6 +49,7 @@ public class ProjectController {
     @ResponseBody
     public ResponseEntity<?> createProject(@RequestBody Project project, @RequestHeader("user-api-key") String apiKey, UriComponentsBuilder ucBuilder) {
         logger.info("Create project: {}, owner: {}", project, apiKey);
+        rateLimitService.accept(apiKey);
 
         String userId = authenticationService.authenticate(apiKey);
 
@@ -51,8 +57,8 @@ public class ProjectController {
             logger.warn("Unable to create this project. Project not valid {}", project);
             return new ResponseEntity(HttpStatus.BAD_REQUEST);
         }
-
         UUID projectId = projectService.createProject(project, userId);
+        bidWinnerNotificationService.notifyUpdate();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setLocation(ucBuilder.path("/project/{projectId}").buildAndExpand(projectId.toString()).toUri());
@@ -64,8 +70,11 @@ public class ProjectController {
     @RequestMapping(value = "/", method = RequestMethod.GET)
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
-    public ResponseEntity<List<Project>> getAllProjects() {
+    public ResponseEntity<List<Project>> getAllProjects(@RequestHeader("user-api-key") String apiKey) {
         logger.info("Get all the projects");
+        rateLimitService.accept(apiKey);
+
+        String userId = authenticationService.authenticate(apiKey);
         List<Project> projects = projectService.getAllProjects();
 
         return new ResponseEntity<>(projects, HttpStatus.OK);
@@ -74,7 +83,12 @@ public class ProjectController {
     @RequestMapping(value = "/{projectid}", method = RequestMethod.GET)
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
-    public ResponseEntity<Project> getProjectById(@PathVariable("projectid") String projectid) {
+    public ResponseEntity<Project> getProjectById(@PathVariable("projectid") String projectid,
+                                                  @RequestHeader("user-api-key") String apiKey) {
+        rateLimitService.accept(apiKey);
+
+        String userId = authenticationService.authenticate(apiKey);
+
         if (!InputValidationService.validateUUID(projectid)) {
             logger.error("Invalid input uuid {}", projectid);
             return new ResponseEntity(HttpStatus.NOT_FOUND);
@@ -92,9 +106,13 @@ public class ProjectController {
     @RequestMapping(value = "/user/{ownerId}", method = RequestMethod.GET)
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
-    public ResponseEntity<List<Project>> getProjectByUser(@PathVariable("ownerId") String ownerId) {
-
+    public ResponseEntity<List<Project>> getProjectByUser(@PathVariable("ownerId") String ownerId,
+                                                          @RequestHeader("user-api-key") String apiKey) {
         logger.info("Get the project with user id {}", ownerId);
+        rateLimitService.accept(apiKey);
+
+        String userId = authenticationService.authenticate(apiKey);
+
         List<Project> project = projectService.getProjectByUserId(ownerId);
 
         if (project == null) {
@@ -111,10 +129,12 @@ public class ProjectController {
     public ResponseEntity<Project> updateProjectById(@PathVariable("projectid") String projectid, @RequestBody Project project,
                                                      @RequestHeader("user-api-key") String apiKey) {
         logger.info("Update the project info : {}", projectid);
+        rateLimitService.accept(apiKey);
 
         String userId = authenticationService.authenticate(apiKey);
 
         Project updatedProject = projectService.updateProject(UUID.fromString(projectid), project, userId);
+        bidWinnerNotificationService.notifyUpdate();
         return new ResponseEntity<>(updatedProject, HttpStatus.OK);
     }
 
@@ -124,9 +144,12 @@ public class ProjectController {
     public ResponseEntity<?> deleteProject(@PathVariable("projectid") String projectid,
                                            @RequestHeader("user-api-key") String apiKey) {
         logger.info("Delete the project: {}", projectid);
+        rateLimitService.accept(apiKey);
+
         String userId = authenticationService.authenticate(apiKey);
 
         projectService.deleteProject(UUID.fromString(projectid), userId);
-        return new ResponseEntity<Project>(HttpStatus.NO_CONTENT);
+        bidWinnerNotificationService.notifyUpdate();
+        return new ResponseEntity<Project>(HttpStatus.OK);
     }
 }

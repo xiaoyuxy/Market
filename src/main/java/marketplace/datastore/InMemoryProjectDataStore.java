@@ -1,6 +1,7 @@
 package marketplace.datastore;
 
 import marketplace.model.Project;
+import org.springframework.stereotype.Repository;
 
 import javax.rmi.PortableRemoteObject;
 import java.util.ArrayList;
@@ -14,6 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * @author Xiaoyu Liang
  */
+@Repository("ProjectDataStore")
 public class InMemoryProjectDataStore implements ProjectDataStore {
 
     private final Map<UUID, Project> idToProjectMap;

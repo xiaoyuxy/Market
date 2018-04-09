@@ -21,16 +21,29 @@ public interface ProjectDataStore {
     void saveProject(Project project);
 
     /**
-     * Get a project from projectid
+     * Get a project using projectid
      *
      * @param projectId the project id to be fetched
      * @return the project for given project if it exist, otherwise null
      */
     Project getProjectById(UUID projectId);
 
+    /**
+     * Get all the existing project
+     * @return all the projects
+     */
     List<Project> getAllProjects();
 
+    /**
+     * Delete a project using the projectid
+     * @param projectId the project id to be deleted
+     */
     void delete(UUID projectId);
 
+    /**
+     * Get projects using the userid
+     * @param userId the user id to be fetched
+     * @return all the projects belong to this user
+     */
     List<Project> getProjectByUserId(String userId);
 }

@@ -5,19 +5,23 @@ import marketplace.model.Project;
 import marketplace.service.auth.AuthorizationException;
 import marketplace.service.auth.AuthorizationService;
 import marketplace.service.auth.AuthorizationServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
 /**
  * Created by xiaoyuliang on 4/5/18.
  */
+@Service("ProjectService")
 public class ProjectServiceImpl implements ProjectService {
 
     private final ProjectDataStore projectDataStore;
     private final AuthorizationService authorizationService;
 
+    @Autowired
     public ProjectServiceImpl(ProjectDataStore projectDataStore) {
         this.projectDataStore = projectDataStore;
         this.authorizationService = new AuthorizationServiceImpl(projectDataStore);
@@ -79,5 +83,18 @@ public class ProjectServiceImpl implements ProjectService {
     @Override
     public List<Project> getAllProjects() {
         return projectDataStore.getAllProjects();
+    }
+
+    // This is an expensive implementation
+    @Override
+    public Project getNextExpiringProject() {
+        List<Project> allProjects = getAllProjects();
+
+        if (allProjects.size() > 0) {
+            allProjects.sort(Comparator.comparing(Project::getExpireTime));
+            return allProjects.get(0);
+        } else {
+            return null;
+        }
     }
 }

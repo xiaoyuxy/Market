@@ -2,6 +2,7 @@ package marketplace.datastore;
 
 import marketplace.datastore.BidDataStore;
 import marketplace.model.Bid;
+import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * @author xiaoyuliang
  */
+@Repository("BidDataStore")
 public class InMemoryBidDataStore implements BidDataStore {
     private final Map<UUID, Bid> idToBidMap;
     private final Map<String, List<Bid>> userToBidMap;

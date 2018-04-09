@@ -6,5 +6,5 @@ package marketplace.service.infra;
  * @author xiaoyuliang
  */
 public interface RateLimitService {
-    boolean accept(String apiKey);
+    void accept(String apiKey);
 }
